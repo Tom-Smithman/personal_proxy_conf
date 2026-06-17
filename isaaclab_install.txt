@@ -1,0 +1,162 @@
+# ===== 0. 系统依赖 =====
+sudo apt install -y libsm6 libxrender1 libfontconfig1 libxext6
+
+# ===== 1. 安装 uv =====
+curl -LsSf https://astral.sh/uv/install.sh | sh
+source ~/.bashrc
+
+# ===== 2. 创建环境 =====
+uv venv --python 3.11 --seed env_isaaclab
+source env_isaaclab/bin/activate
+
+# ===== 3. PyTorch（RTX 5090 需 >= 2.7.0） =====
+pip install -U torch==2.7.0 torchvision==0.22.0 \
+    --index-url https://download.pytorch.org/whl/cu128
+
+# ===== 4. Isaac Sim =====
+pip install --upgrade pip
+pip install "isaacsim[all,extscache]==5.1.0" \
+    --extra-index-url https://pypi.nvidia.com
+
+# ===== 5. Isaac Lab =====
+git clone https://github.com/isaac-sim/IsaacLab.git
+cd IsaacLab && git checkout v2.3.2
+
+# 5a. 先跑官方脚本（会在 flatdict 处失败）
+./isaaclab.sh --install
+# → 报错: Failed to build flatdict ... 没关系
+
+# 5b. 手动补装 flatdict（唯一构建失败的包）
+pip install "flatdict==4.0.1"
+pip install toml "prettytable==3.3.0" einops "flatdict==4.0.1"
+
+# 5c. 再跑官方脚本（这次成功）
+./isaaclab.sh --install
+
+
+# ===== 6. 环境变量持久化（uv venv / 标准 venv 通用） =====
+cat >> env_isaaclab/bin/activate << 'EOF'
+
+# === Isaac Lab 环境变量 ===
+export OMNIVERSE_ACCEPT_EULA=YES
+export LD_LIBRARY_PATH=$(dirname $(dirname $(realpath "$BASH_SOURCE")))/lib/python3.11/site-packages/isaacsim/extscache/omni.usd.libs-*/bin:$LD_LIBRARY_PATH
+EOF
+
+# ===== 7. 验证 =====
+python -c "
+import torch; print(f'PyTorch: {torch.__version__}, CUDA: {torch.version.cuda}')
+import isaaclab; print(f'Isaac Lab: {isaaclab.__version__}')
+import isaacsim; print(f'Isaac Sim: {isaacsim.__version__}')
+"
+
+激活环境: source env_isaaclab/bin/activate
+运行测试: cd IsaacLab && python scripts/environments/zero_agent.py --task Isaac-Cartpole-Direct-v0 --num_envs 32 --headless
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+
+
+# create a virtual environment named env_isaaclab with python3.11 and pip
+uv venv --python 3.11 --seed env_isaaclab
+# activate the virtual environment
+source env_isaaclab/bin/activate
+
+
+pip install -U torch==2.7.0 torchvision==0.22.0 --index-url https://download.pytorch.org/whl/cu128
+
+pip install --upgrade pip
+
+pip install "isaacsim[all,extscache]==5.1.0" --extra-index-url https://pypi.nvidia.com
+
+git clone https://github.com/isaac-sim/IsaacLab.git
+
+cd IsaacLab/
+
+git checkout v2.3.2
+
+./isaaclab.sh --install # or "./isaaclab.sh -i"
+
+# 1. 先跑官方脚本（会失败，但杂事已做完）
+./isaaclab.sh --install
+# → 在 flatdict 处报错退出，没关系
+
+# 2. 手动修复
+pip install toml "prettytable==3.3.0" einops "flatdict==4.0.1"
+pip install -e source/isaaclab --no-deps
+
+# 3. 再次跑官方脚本（这次会成功，因为 flatdict 已装好）
+./isaaclab.sh --install
+# → 检测到 isaaclab 已安装，跳过，继续装子包和剩余依赖
+
+安装系统库（否则 libSM.so.6 报错）
+sudo apt install -y libsm6 libxrender1 libfontconfig1 libxext6
+
+验证安装
+python -c "
+import torch
+print(f'PyTorch: {torch.__version__}, CUDA: {torch.version.cuda}, GPU: {torch.cuda.is_available()}')
+import isaaclab
+print(f'Isaac Lab: {isaaclab.__version__}')
+import isaacsim
+print(f'Isaac Sim: {isaacsim.__version__}')
+"
+
+
+激活环境: source env_isaaclab/bin/activate
+运行测试: cd IsaacLab && python scripts/environments/zero_agent.py --task Isaac-Cartpole-Direct-v0 --num_envs 32 --headless
+
+
+
+
+可能的问题:
+# =====  环境变量持久化 =====
+mkdir -p env_isaaclab/etc/conda/activate.d
+cat > env_isaaclab/etc/conda/activate.d/isaaclab_env.sh << 'EOF'
+export OMNIVERSE_ACCEPT_EULA=YES
+export LD_LIBRARY_PATH=$PWD/../env_isaaclab/lib/python3.11/site-packages/isaacsim/extscache/omni.usd.libs-*/bin:$LD_LIBRARY_PATH
+EOF
+chmod +x env_isaaclab/etc/conda/activate.d/isaaclab_env.sh
+
